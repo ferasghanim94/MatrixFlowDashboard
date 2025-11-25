@@ -137,7 +137,7 @@ export const attributionFlowData = {
   
   tables: {
     read: [
-      "sessions_p", 
+      "sessions", 
       "user_profile", 
       "contact_profile_metadata", 
       "company_profile_meta_data", 
@@ -181,7 +181,7 @@ export const attributionFlowData = {
   validationGaps: {
     p0: [
       "visits: client_id, session_id, dateCreated NOT NULL constraints missing",
-      "sessions_p: client_id, session_id NOT NULL constraints missing",
+      "sessions: client_id, session_id NOT NULL constraints missing",
       "interaction_touchpoints: date_created NOT NULL constraint missing",
       "ClientAttributionRunner: No validation of found touchpoints",
       "ContactAttributionRunner: No email format validation",
