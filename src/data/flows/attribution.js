@@ -14,6 +14,7 @@ flowchart TD
 
     subgraph Stage1["📊 STAGE 1: SESSION → VISIT"]
         D[VisitsRunner<br/>sessions_to_visits_sub.py]
+        D1[Subscribes: Topic.session_webhook<br/>Topic.event_hit.value + '#']
         E[bi.visits table<br/>Enriched data]
     end
 
@@ -24,12 +25,15 @@ flowchart TD
 
     subgraph ParallelFlows["⚡ PARALLEL FLOWS"]
         H1[Form Submissions<br/>LeadsRunner<br/>MarketingSiteFormsRunner]
+        H1a[Publishes:<br/>new_interaction_touchpoint]
         H2[Mobile Signups<br/>MobileSignupsWorker]
+        H2a[Publishes:<br/>mobile_event_hit<br/>delayed_attribution_trigger]
     end
 
     subgraph Stage3["🏢 STAGE 3: COMPANY ATTRIBUTION"]
         I[Company Signup Trigger<br/>CompanyEventModel]
         J[ClientAttributionRunner<br/>attribution_sub.py]
+        J1[Topics: companyCreated, signup<br/>delayed_attribution_trigger]
         K[Map Identifiers<br/>client_id → company]
         L[Recursive Discovery<br/>Max 5 hops]
         M[bi.company_interactions]
@@ -43,13 +47,16 @@ flowchart TD
 
     subgraph Stage4["👤 STAGE 4: CONTACT ATTRIBUTION"]
         O[ContactAttributionRunner<br/>contact_attribution_sub.py]
+        O1[Topics: new_contact_created<br/>new_interaction_touchpoint<br/>companyCreated, mobileAppSignup<br/>delayed_attribution, invoca]
         P[Connect Email to Client IDs]
         Q[bi.contact_interactions]
         R[contact_profile_attribution_first]
     end
 
     subgraph Stage5["⏰ STAGE 5: DELAYED RE-CALC"]
-        S[DelayedAttributionRunner<br/>6 + 30 min delays]
+        S[DelayedAttributionRunner<br/>delayed_attribution_worker.py]
+        S1[Subscribes: new_interaction_touchpoint<br/>mobile_event_hit]
+        S2[DELAY_IN_MINUTES = 30<br/>SHORT_DELAY_IN_MINUTES = 6]
     end
 
     subgraph Downstream["📤 DOWNSTREAM CONSUMERS"]
@@ -61,33 +68,51 @@ flowchart TD
     Sources --> B
     B --> C
     C --> D
-    D --> E
+    D --> D1
+    D1 --> E
     E --> F
     F --> G
     G --> ParallelFlows
-    ParallelFlows --> I
+    
+    %% Form Submissions connections
+    H1 --> H1a
+    H1a -->|new_interaction_touchpoint| O
+    H1a -->|new_interaction_touchpoint| S
+    
+    %% Mobile Signups connections
+    H2 --> H2a
+    H2a -->|delayed_attribution_trigger| I
+    H2a -->|mobile_event_hit| O
+    H2a -->|mobile_event_hit| S
+    
     I --> J
-    J --> K
+    J --> J1
+    J1 --> K
     K --> L
     L --> M
     M --> Models
     Models --> S
+    S --> S1
+    S1 --> S2
     I --> O
-    O --> P
+    O --> O1
+    O1 --> P
     P --> Q
     Q --> R
     R --> S
-    S -.-> J
-    S -.-> O
+    S -.->|re-trigger| J
+    S -.->|re-trigger| O
     M --> Downstream
     R --> Downstream
 
     style Sources fill:#e0f2fe,stroke:#0284c7
+    style Stage1 fill:#f0fdf4,stroke:#16a34a
     style Stage3 fill:#dbeafe,stroke:#2563eb
     style Stage4 fill:#dbeafe,stroke:#2563eb
     style Stage5 fill:#fef3c7,stroke:#d97706
     style Models fill:#f3e8ff,stroke:#9333ea
     style Downstream fill:#dcfce7,stroke:#16a34a
+    style ParallelFlows fill:#fef9c3,stroke:#ca8a04
 `;
 
 export const attributionFlowData = {
@@ -161,21 +186,49 @@ export const attributionFlowData = {
   },
   
   topics: {
-    subscribes: [
-      "Topic.sessions",
-      "company_events_webhook (companyCreated)",
-      "event_hit (signup)",
-      "new_contact_created",
-      "new_interaction_touchpoint",
-      "mobile_event_hit",
-      "delayed_attribution_trigger"
-    ],
-    publishes: [
-      "Topic.new_interaction_touchpoint",
-      "Topic.company_post_attribution_event",
-      "Topic.contact_update_attribution_to_hubspot",
-      "Topic.delayed_attribution_trigger"
-    ]
+    subscribes: {
+      visitsRunner: [
+        "Topic.session_webhook",
+        "Topic.event_hit.value + '#' (event hits)"
+      ],
+      clientAttributionRunner: [
+        "get_company_events_topics(['companyCreated'])",
+        "get_event_hit_topics(['signup'])",
+        "Topic.delayed_attribution_trigger"
+      ],
+      contactAttributionRunner: [
+        "Topic.new_contact_created",
+        "Topic.new_interaction_touchpoint",
+        "get_company_events_topics(['companyCreated'])",
+        "get_mobile_event_topics(['mobileAppSignup-8-signupDone-v7'])",
+        "Topic.delayed_attribution_trigger",
+        "Topic.invoca_transaction"
+      ],
+      delayedAttributionRunner: [
+        "Topic.new_interaction_touchpoint",
+        "get_mobile_event_topics(['mobileAppSignup-8-signupDone-v7'])"
+      ]
+    },
+    publishes: {
+      leadsRunner: [
+        "Topic.new_interaction_touchpoint"
+      ],
+      marketingSiteFormsRunner: [
+        "Topic.new_interaction_touchpoint"
+      ],
+      mobileSignupsWorker: [
+        "Topic.delayed_attribution_trigger",
+        "mobile_event_hit (mobileAppSignup-8-signupDone-v7)"
+      ],
+      clientAttributionRunner: [
+        "Topic.company_post_attribution_event",
+        "Topic.delayed_attribution_trigger"
+      ],
+      contactAttributionRunner: [
+        "Topic.contact_update_attribution_to_hubspot",
+        "Topic.delayed_attribution_trigger"
+      ]
+    }
   },
 
   validationGaps: {
@@ -207,6 +260,11 @@ export const attributionFlowData = {
       clientAttribution: "~1-2 seconds on signup",
       contactAttribution: "~1-2 seconds on contact creation",
       delayedAttribution: "6 + 30 minutes"
+    },
+    delayConstants: {
+      DELAY_IN_MINUTES: 30,
+      SHORT_DELAY_IN_MINUTES: 6,
+      shortDelayTriggers: ["new contacts", "mobile signups"]
     },
     attributionModels: [
       "First-Touch (oldest interaction)",

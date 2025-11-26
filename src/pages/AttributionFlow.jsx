@@ -114,6 +114,130 @@ function AttributionFlow() {
         </div>
       </div>
 
+      {/* Delay Constants */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Clock size={20} className="text-amber-500" />
+          Delayed Attribution Constants
+        </h2>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <div className="text-sm text-amber-600 font-medium mb-1">DELAY_IN_MINUTES</div>
+            <div className="text-2xl font-bold text-amber-700">{keyMetrics.delayConstants.DELAY_IN_MINUTES} min</div>
+            <div className="text-xs text-amber-600 mt-1">Standard delay for re-calculation</div>
+          </div>
+          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="text-sm text-green-600 font-medium mb-1">SHORT_DELAY_IN_MINUTES</div>
+            <div className="text-2xl font-bold text-green-700">{keyMetrics.delayConstants.SHORT_DELAY_IN_MINUTES} min</div>
+            <div className="text-xs text-green-600 mt-1">For: {keyMetrics.delayConstants.shortDelayTriggers.join(', ')}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Topics Subscriptions by Worker */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Topic Subscriptions by Worker</h2>
+        <div className="grid lg:grid-cols-4 gap-4">
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="font-semibold text-blue-800 mb-3">VisitsRunner</h3>
+            <ul className="space-y-2">
+              {topics.subscribes.visitsRunner.map((topic, idx) => (
+                <li key={idx} className="text-sm font-mono text-blue-700 bg-blue-100 px-2 py-1 rounded break-all">
+                  {topic}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+            <h3 className="font-semibold text-indigo-800 mb-3">ClientAttributionRunner</h3>
+            <ul className="space-y-2">
+              {topics.subscribes.clientAttributionRunner.map((topic, idx) => (
+                <li key={idx} className="text-sm font-mono text-indigo-700 bg-indigo-100 px-2 py-1 rounded break-all">
+                  {topic}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-4 bg-violet-50 rounded-lg border border-violet-200">
+            <h3 className="font-semibold text-violet-800 mb-3">ContactAttributionRunner</h3>
+            <ul className="space-y-2">
+              {topics.subscribes.contactAttributionRunner.map((topic, idx) => (
+                <li key={idx} className="text-sm font-mono text-violet-700 bg-violet-100 px-2 py-1 rounded break-all">
+                  {topic}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <h3 className="font-semibold text-amber-800 mb-3">DelayedAttributionRunner</h3>
+            <ul className="space-y-2">
+              {topics.subscribes.delayedAttributionRunner.map((topic, idx) => (
+                <li key={idx} className="text-sm font-mono text-amber-700 bg-amber-100 px-2 py-1 rounded break-all">
+                  {topic}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Topics Published by Worker */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Topics Published by Worker</h2>
+        <div className="grid lg:grid-cols-5 gap-4">
+          <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+            <h3 className="font-semibold text-emerald-800 mb-3">LeadsRunner</h3>
+            <ul className="space-y-2">
+              {topics.publishes.leadsRunner.map((topic, idx) => (
+                <li key={idx} className="text-sm font-mono text-emerald-700 bg-emerald-100 px-2 py-1 rounded break-all">
+                  {topic}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-4 bg-teal-50 rounded-lg border border-teal-200">
+            <h3 className="font-semibold text-teal-800 mb-3">MarketingSiteForms</h3>
+            <ul className="space-y-2">
+              {topics.publishes.marketingSiteFormsRunner.map((topic, idx) => (
+                <li key={idx} className="text-sm font-mono text-teal-700 bg-teal-100 px-2 py-1 rounded break-all">
+                  {topic}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-4 bg-cyan-50 rounded-lg border border-cyan-200">
+            <h3 className="font-semibold text-cyan-800 mb-3">MobileSignupsWorker</h3>
+            <ul className="space-y-2">
+              {topics.publishes.mobileSignupsWorker.map((topic, idx) => (
+                <li key={idx} className="text-sm font-mono text-cyan-700 bg-cyan-100 px-2 py-1 rounded break-all">
+                  {topic}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+            <h3 className="font-semibold text-indigo-800 mb-3">ClientAttribution</h3>
+            <ul className="space-y-2">
+              {topics.publishes.clientAttributionRunner.map((topic, idx) => (
+                <li key={idx} className="text-sm font-mono text-indigo-700 bg-indigo-100 px-2 py-1 rounded break-all">
+                  {topic}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-4 bg-violet-50 rounded-lg border border-violet-200">
+            <h3 className="font-semibold text-violet-800 mb-3">ContactAttribution</h3>
+            <ul className="space-y-2">
+              {topics.publishes.contactAttributionRunner.map((topic, idx) => (
+                <li key={idx} className="text-sm font-mono text-violet-700 bg-violet-100 px-2 py-1 rounded break-all">
+                  {topic}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Tables Section */}
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
