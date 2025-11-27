@@ -60,7 +60,7 @@ flowchart TD
     end
 
     subgraph APIs["🌐 ADVERTISING PLATFORM APIs"]
-        A1[Google Ads API<br/>create_batch_offline_conversions<br/>Customer IDs: 3625606301+<br/>Batch Size: 2000]
+        A1[Google Ads API<br/>create_batch_offline_conversions<br/>Customer IDs: 3625606301+]
         A2[Facebook Conversion API<br/>v18.0 - Pixel: 1459709444231724<br/>User Data + Custom Data<br/>Batch Size: 500]
         A3[Bing Ads API<br/>send_offline_conversion<br/>No batching]
     end
@@ -311,7 +311,8 @@ export const offlineConversionsFlowData = {
     google: {
       endpoint: "create_batch_offline_conversions",
       customerIds: ["3625606301", "Multiple accounts"],
-      batchSize: 2000,
+      batchSize: "Variable (API dependent)",
+      queryBatchSize: 100000,
       dataSent: ["GCLID/WBRAID/GBRAID", "Conversion Name", "Conversion Time", "Conversion Value", "Visit Time", "User Agent", "IP Address", "Customer ID"]
     },
     facebook: {

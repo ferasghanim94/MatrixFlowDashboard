@@ -115,7 +115,7 @@ export const companyFunnelFlowData = {
       description: "Calculates ARR range from MRR for segmentation"
     },
     { 
-      name: "HubspotCompanyWebhookSub", 
+      name: "HubspotCompanyWebhookRunner", 
       file: "matrix/worker/subscribers/hubspot_events/hubspot_company_webhook_sub.py", 
       risk: "P1",
       description: "Syncs company data bidirectionally with HubSpot"
