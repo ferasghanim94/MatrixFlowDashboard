@@ -163,6 +163,55 @@ flow-dashboard/
 - **Tailwind CSS** - Utility-first styling
 - **Lucide React** - Icon library
 
+## Adding New Flows
+
+If you need to document a new data flow, follow these steps:
+
+### Step 1: Create the Flow Documentation
+
+Create a new markdown file in the appropriate category folder under `docs/`:
+
+```
+docs/
+├── CRM/                          # CRM-related flows
+│   ├── company_funnel_flow_diagram.md
+│   └── hubspot_flow.md
+├── Marketing/                    # Marketing-related flows
+│   ├── attribution_flow_diagram.md
+│   └── offline_conversions_flow_diagram.md
+└── Payments/                     # Payment-related flows
+    └── payment_flow_diagram.md
+```
+
+Use the existing flow documentation files as templates. Each flow doc should include:
+
+- **Header**: Title, created date, purpose
+- **ASCII Flow Diagram**: Visual representation of the data flow
+- **Key Data Points**: Timing, schedules, critical thresholds
+- **Critical Worker Priority Matrix**: Workers, business impact, validation gaps, priority (P0/P1/P2)
+- **Database Tables**: Read and write tables
+- **Data Quality Considerations**: Current state, edge cases, known limitations
+- **Business Logic Flow Summary**: High-level flow overview
+- **Monitoring & Observability**: Key metrics and critical alerts
+
+### Step 2: Update the Critical Path Mapping
+
+After creating the flow documentation, update `docs/critical_path_mapping.md` to include the new flow:
+
+1. Add a new section for the flow with its overview, workers, and priority matrix
+2. Update the **Cross-Flow Dependencies** section if the new flow interacts with existing flows
+3. Update the **Validation Gap Summary** table with the new flow's P0/P1/P2 issue counts
+4. Add any new P0 issues to the **Top Critical Data Quality Issues** list
+
+### Step 3: Add to the Dashboard UI
+
+If you want the flow to appear in the interactive dashboard:
+
+1. Create a new data file in `src/data/flows/` (e.g., `myflow.js`)
+2. Create a new page component in `src/pages/` (e.g., `MyFlow.jsx`)
+3. Add the route in `src/App.jsx`
+4. Add navigation link in `src/components/Sidebar.jsx`
+
 ## Troubleshooting
 
 ### Port Already in Use
