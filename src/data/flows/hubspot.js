@@ -474,6 +474,7 @@ flowchart TD
     end
 
     subgraph HourlyCrons["⏰ HOURLY CRONS"]
+        HC6["check_qualification_list_membership"]
         HC1["sync_hubspot_calls"]
         HC2["hubspot_meetings"]
         HC3["hubspot_email_engagements"]
@@ -517,6 +518,10 @@ flowchart TD
         OT7[hubspot_ticket]
         OT8[hubspot_dqa_results]
         OT9[hubspot_alerts]
+        OT10[hubspot_backfill]
+        OT11[hubspot_backfill_task]
+        OT12[hubspot_engagement_association_v3]
+        OT13[hubspot_contact_list_membership]
     end
 
     CM1 --> OT8
@@ -540,6 +545,13 @@ flowchart TD
     DC1 & DC2 --> OT1
     
     BF --> OT1
+    BF --> OT10
+    BF --> OT11
+    
+    HC2 --> OT12
+    HC1 --> OT12
+    HC6 --> OT13
+    PW3 --> OT13
 
     style CriticalMonitoring fill:#fecaca,stroke:#dc2626
     style SlackAlerts fill:#fef9c3,stroke:#ca8a04
@@ -584,7 +596,7 @@ export const hubspotScheduledFlowData = {
     { 
       name: "hubspot_meetings", 
       schedule: "Every hour",
-      type: "Airflow DAG",
+      type: "Cron",
       risk: "P1",
       description: "Fetches meeting engagements from HubSpot API"
     },
