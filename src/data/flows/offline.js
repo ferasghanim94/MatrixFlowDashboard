@@ -41,34 +41,53 @@ flowchart TD
         DB4[contact_conversion_probability<br/>combined1/3_conversion_probability<br/>cp1/3_signup_first_value<br/>book_a_demo_1/3_probability]
     end
 
-    subgraph Workers["⚙️ CONVERSION WORKERS - Timed Runners"]
-        W1[GoogleConversionRunner<br/>Interval: 30 min<br/>google_conversion_sub.py]
-        W2[FacebookConversionRunner<br/>Interval: 60 min<br/>facebook_conversion_sub.py]
-        W3[BingConversionRunner<br/>Interval: 60 min<br/>bing_conversion_sub.py]
+    subgraph Workers["⚙️ CONVERSION WORKERS - Timed Runners (7)"]
+        W1[GoogleConversionRunner<br/>Interval: 30 min]
+        W1E[GoogleConversionRunner Enhanced<br/>Interval: 10 min<br/>PII-based matching]
+        W2[FacebookConversionRunner<br/>Interval: 60 min]
+        W3[BingConversionRunner<br/>Interval: 60 min]
+        W4[YoutubeConversionRunner<br/>Interval: 10 min]
+        W5[TiktokConversionRunner<br/>Interval: 10 min]
+        W6[LinkedinConversionRunner<br/>Interval: 60 min]
     end
 
     subgraph WorkerLogic["📋 WORKER LOGIC"]
         L1[Google Logic<br/>Channels: cpc-google*<br/>Click IDs: gclid/wbraid/gbraid<br/>Date Range: 8 days]
         L2[Facebook Logic<br/>Channel: cpc-facebook<br/>Click IDs: fbclid, fbp<br/>Date Range: 7 days]
         L3[Bing Logic<br/>Channels: cpc-bing*<br/>Click ID: msclkid<br/>Date Range: 8 days]
+        L4[YouTube Logic<br/>Channel: cpc-youtube<br/>Click ID: gclid]
+        L5[TikTok Logic<br/>Channel: cpc-tiktok<br/>Click ID: ttclid]
+        L6[LinkedIn Logic<br/>Channel: cpc-linkedin<br/>Email-based matching]
     end
 
     subgraph Dedup["🔒 DEDUPLICATION & FILTERING"]
-        D1[bi.google_conversion<br/>bi.generic_conversions<br/>Filter: legitimacy]
+        D1[bi.google_conversion<br/>Filter: legitimacy]
+        D1E[bi.google_conversion_v2<br/>Filter: legitimacy]
         D2[bi.facebook_conversion_v2<br/>Filter: spam, corrupted phones<br/>CA consent check]
         D3[bi.bing_conversion<br/>bi.generic_conversions<br/>Filter: legitimacy]
+        D4[bi.youtube_conversion_v2]
+        D5[bi.tiktok_conversion]
+        D6[bi.linkedin_conversion]
     end
 
     subgraph APIs["🌐 ADVERTISING PLATFORM APIs"]
         A1[Google Ads API<br/>create_batch_offline_conversions<br/>Customer IDs: 3625606301+]
-        A2[Facebook Conversion API<br/>v18.0 - Pixel: 1459709444231724<br/>User Data + Custom Data<br/>Batch Size: 500]
+        A1E[Google Ads API Enhanced<br/>create_batch_offline_enhanced_conversions<br/>PII: email, phone, name]
+        A2[Facebook Conversion API<br/>v18.0 - Pixel: 1459709444231724<br/>Batch Size: 500]
         A3[Bing Ads API<br/>send_offline_conversion<br/>No batching]
+        A4[YouTube via Google Ads<br/>Customer ID: 1842366927]
+        A5[TikTok Events API<br/>Pixel: CA0ETQRC77U8C02RLCQ0<br/>No batching]
+        A6[LinkedIn Conversion API<br/>Email-based matching<br/>No batching]
     end
 
     subgraph Audit["📊 AUDIT TRAIL TABLES"]
-        AU1[bi.google_conversion<br/>clid, clid_type, company<br/>conversion_type, value, error]
-        AU2[bi.facebook_conversion_v2<br/>conversion_id, fbclid, fbp<br/>external_id, email, phone]
-        AU3[bi.bing_conversion<br/>clid, company<br/>conversion_type, visit_time]
+        AU1[bi.google_conversion]
+        AU1E[bi.google_conversion_v2]
+        AU2[bi.facebook_conversion_v2]
+        AU3[bi.bing_conversion]
+        AU4[bi.youtube_conversion_v2]
+        AU5[bi.tiktok_conversion]
+        AU6[bi.linkedin_conversion]
     end
 
     %% External DAGs to Main DAG
@@ -102,23 +121,39 @@ flowchart TD
 
     %% Worker to Logic
     W1 --> L1
+    W1E --> L1
     W2 --> L2
     W3 --> L3
+    W4 --> L4
+    W5 --> L5
+    W6 --> L6
 
-    %% Logic to Dedup
+    %% Logic to Dedup (Google splits into two paths)
     L1 --> D1
+    L1 --> D1E
     L2 --> D2
     L3 --> D3
+    L4 --> D4
+    L5 --> D5
+    L6 --> D6
 
-    %% Dedup to APIs
+    %% Dedup to APIs (separate paths for standard vs enhanced)
     D1 --> A1
+    D1E --> A1E
     D2 --> A2
     D3 --> A3
+    D4 --> A4
+    D5 --> A5
+    D6 --> A6
 
-    %% APIs to Audit
+    %% APIs to Audit (separate audit tables)
     A1 --> AU1
+    A1E --> AU1E
     A2 --> AU2
     A3 --> AU3
+    A4 --> AU4
+    A5 --> AU5
+    A6 --> AU6
 
     style ExternalDAGs fill:#e8f5e9,stroke:#2e7d32
     style MainDAG fill:#e3f2fd,stroke:#1976d2
@@ -143,6 +178,14 @@ export const offlineConversionsFlowData = {
       description: "Sends conversions to Google Ads API"
     },
     { 
+      name: "GoogleConversionRunner (Enhanced)", 
+      file: "matrix/worker/google_conversion/google_conversion_sub_enhanced.py", 
+      risk: "P1",
+      interval: "600s (10 min)",
+      description: "Sends enhanced conversions with PII (email, phone, name) to Google Ads API",
+      outputTable: "google_conversion_v2"
+    },
+    { 
       name: "FacebookConversionRunner", 
       file: "matrix/worker/facebook_conversion/facebook_conversion_sub.py", 
       risk: "P1",
@@ -155,6 +198,30 @@ export const offlineConversionsFlowData = {
       risk: "P1",
       interval: "3600s (60 min)",
       description: "Sends conversions to Bing Ads API"
+    },
+    { 
+      name: "YoutubeConversionRunner", 
+      file: "matrix/worker/youtube_conversion/youtube_conversion_sub.py", 
+      risk: "P1",
+      interval: "600s (10 min)",
+      description: "Sends conversions to YouTube via Google Ads API",
+      outputTable: "youtube_conversion_v2"
+    },
+    { 
+      name: "TiktokConversionRunner", 
+      file: "matrix/worker/tiktok_conversion/tiktok_conversion_worker.py", 
+      risk: "P1",
+      interval: "600s (10 min)",
+      description: "Sends conversions to TikTok Events API",
+      outputTable: "tiktok_conversion"
+    },
+    { 
+      name: "LinkedinConversionRunner", 
+      file: "matrix/worker/linkedin_conversion/linkedin_conversion_sub.py", 
+      risk: "P1",
+      interval: "3600s (60 min)",
+      description: "Sends conversions to LinkedIn Conversion API (email-based)",
+      outputTable: "linkedin_conversion"
     }
   ],
 
@@ -240,8 +307,12 @@ export const offlineConversionsFlowData = {
     ],
     write: [
       "google_conversion",
+      "google_conversion_v2",
       "facebook_conversion_v2",
       "bing_conversion",
+      "youtube_conversion_v2",
+      "tiktok_conversion",
+      "linkedin_conversion",
       "generic_conversions"
     ],
     bigquery: [
@@ -261,6 +332,13 @@ export const offlineConversionsFlowData = {
       "CP1 Conversions: cp1 11+ no ecl, cp1 signup funnel v3",
       "CP3 Conversions: cp3 11+ no ecl, cp3 signup funnel v3",
       "Signup with consent test"
+    ],
+    googleEnhanced: [
+      "All standard Google conversion types, PLUS:",
+      "First Demo Booked Offline",
+      "First Demo Booked (QA - legacy) Offline",
+      "First Demo Booked (QA - new) Offline",
+      "High Lead Index SU + BAD 11+"
     ],
     facebook: [
       "MQL (11+, 51+, 51-300, Midtier)",
@@ -286,6 +364,28 @@ export const offlineConversionsFlowData = {
       "Combined CP1: Combined1 ALL, Combined1 11+ (signup funnel)",
       "Combined CP3: Combined3 ALL",
       "Book-a-Demo (BAD): Filled demo form 11+, Booked demo (v1 & v2), Combined BAD conversions"
+    ],
+    youtube: [
+      "Book a Demo (v1 & v2)",
+      "Lead",
+      "MQL",
+      "Paid",
+      "Signup (11+)",
+      "CP1 Conversions: CP1 11+ Intent Score",
+      "CP3 Conversions: CP3 11+ Intent Score"
+    ],
+    tiktok: [
+      "MQL (AddToCart event)",
+      "MQL 11+ (AddToWishlist event)",
+      "Signup 1-10 (PlaceAnOrder event)",
+      "Signup with value by employee range (CompletePayment):",
+      "  - Signup 1-10: value = $20",
+      "  - Signup 11+: value = $200"
+    ],
+    linkedin: [
+      "MQL",
+      "Signup",
+      "CP Conversions (conversion probability based)"
     ]
   },
 
@@ -293,6 +393,12 @@ export const offlineConversionsFlowData = {
     google: {
       channels: ["cpc-google*"],
       clickIds: ["gclid", "wbraid", "gbraid"],
+      dateRange: "Last 8 days"
+    },
+    googleEnhanced: {
+      channels: ["cpc-google*"],
+      clickIds: ["gclid", "wbraid", "gbraid"],
+      piiFields: ["email", "phone", "first_name", "last_name"],
       dateRange: "Last 8 days"
     },
     facebook: {
@@ -303,6 +409,22 @@ export const offlineConversionsFlowData = {
     bing: {
       channels: ["cpc-bing*"],
       clickIds: ["msclkid"],
+      dateRange: "Last 8 days"
+    },
+    youtube: {
+      channels: ["cpc-youtube"],
+      clickIds: ["gclid"],
+      dateRange: "Last 8 days"
+    },
+    tiktok: {
+      channels: ["cpc-tiktok"],
+      clickIds: ["ttclid"],
+      dateRange: "Last 8 days"
+    },
+    linkedin: {
+      channels: ["cpc-linkedin"],
+      clickIds: ["li_fat_id"],
+      matchingMethod: "Email-based (no click ID required)",
       dateRange: "Last 8 days"
     }
   },
@@ -315,6 +437,13 @@ export const offlineConversionsFlowData = {
       queryBatchSize: 100000,
       dataSent: ["GCLID/WBRAID/GBRAID", "Conversion Name", "Conversion Time", "Conversion Value", "Visit Time", "User Agent", "IP Address", "Customer ID"]
     },
+    googleEnhanced: {
+      endpoint: "create_batch_offline_enhanced_conversions",
+      customerIds: ["3625606301", "Multiple accounts"],
+      batchSize: "Variable (API dependent)",
+      dataSent: ["GCLID/WBRAID/GBRAID", "Email (hashed)", "Phone (hashed)", "First Name (hashed)", "Last Name (hashed)", "Conversion Name", "Conversion Time", "Conversion Value"],
+      outputTable: "google_conversion_v2"
+    },
     facebook: {
       apiVersion: "v18.0",
       pixelId: "1459709444231724",
@@ -326,6 +455,26 @@ export const offlineConversionsFlowData = {
       endpoint: "send_offline_conversion",
       batchSize: 1,
       dataSent: ["CLID (msclkid)", "Conversion Name", "Conversion Time", "Conversion Value", "Visit Time", "User Agent", "IP Address"]
+    },
+    youtube: {
+      endpoint: "create_batch_offline_conversions",
+      customerId: "1842366927",
+      batchSize: "Variable (API dependent)",
+      dataSent: ["GCLID", "Conversion Name", "Conversion Time", "Conversion Value"],
+      note: "Uses Google Ads API"
+    },
+    tiktok: {
+      endpoint: "TikTok Events API",
+      pixelId: "CA0ETQRC77U8C02RLCQ0",
+      batchSize: 1,
+      dataSent: ["TTCLID", "Event Name", "Event Time", "Value", "Content Type"]
+    },
+    linkedin: {
+      endpoint: "LinkedIn Conversion API",
+      matchingMethod: "Email-based",
+      batchSize: 1,
+      dataSent: ["Email (hashed)", "Conversion Name", "Conversion Time", "Conversion Value"],
+      note: "No click ID required - uses email matching"
     }
   },
 
@@ -367,8 +516,12 @@ export const offlineConversionsFlowData = {
   timing: {
     airflowSync: "Every hour at minute 5",
     googleConversions: "Every 30 minutes (1800s)",
+    googleEnhancedConversions: "Every 10 minutes (600s)",
     facebookConversions: "Every 60 minutes (3600s)",
-    bingConversions: "Every 60 minutes (3600s)"
+    bingConversions: "Every 60 minutes (3600s)",
+    youtubeConversions: "Every 10 minutes (600s)",
+    tiktokConversions: "Every 10 minutes (600s)",
+    linkedinConversions: "Every 60 minutes (3600s)"
   },
 
   recommendations: {

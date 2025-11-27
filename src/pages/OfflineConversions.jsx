@@ -236,7 +236,7 @@ function OfflineConversions() {
       {/* Conversion Types by Platform */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-6">Conversion Types by Platform</h2>
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {/* Google */}
           <div className="p-4 bg-red-50 rounded-lg border border-red-100">
             <h3 className="font-semibold text-red-800 mb-3">Google Ads</h3>
@@ -244,6 +244,19 @@ function OfflineConversions() {
               {conversionTypes.google.map((type, idx) => (
                 <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 flex-shrink-0" />
+                  {type}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Google Enhanced */}
+          <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
+            <h3 className="font-semibold text-orange-800 mb-3">Google Ads Enhanced</h3>
+            <ul className="space-y-2">
+              {conversionTypes.googleEnhanced.map((type, idx) => (
+                <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 flex-shrink-0" />
                   {type}
                 </li>
               ))}
@@ -270,6 +283,45 @@ function OfflineConversions() {
               {conversionTypes.bing.map((type, idx) => (
                 <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-teal-500 mt-2 flex-shrink-0" />
+                  {type}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* YouTube */}
+          <div className="p-4 bg-rose-50 rounded-lg border border-rose-100">
+            <h3 className="font-semibold text-rose-800 mb-3">YouTube Ads</h3>
+            <ul className="space-y-2">
+              {conversionTypes.youtube.map((type, idx) => (
+                <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-2 flex-shrink-0" />
+                  {type}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* TikTok */}
+          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <h3 className="font-semibold text-slate-800 mb-3">TikTok Ads</h3>
+            <ul className="space-y-2">
+              {conversionTypes.tiktok.map((type, idx) => (
+                <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500 mt-2 flex-shrink-0" />
+                  {type}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* LinkedIn */}
+          <div className="p-4 bg-sky-50 rounded-lg border border-sky-100">
+            <h3 className="font-semibold text-sky-800 mb-3">LinkedIn Ads</h3>
+            <ul className="space-y-2">
+              {conversionTypes.linkedin.map((type, idx) => (
+                <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-2 flex-shrink-0" />
                   {type}
                 </li>
               ))}
