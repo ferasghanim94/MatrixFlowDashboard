@@ -20,7 +20,7 @@ flowchart TD
 
     subgraph PushWorkers["⚙️ PUSH WORKERS"]
         PW1["HubspotCompanyUpdater
-        19 Property Managers"]
+        20 Property Managers"]
         PW2["HubspotContactProfileUpdater
         Real-time"]
         PW3["HubspotUserUsageRunner
@@ -196,7 +196,8 @@ export const hubspotPushFlowData = {
     { name: "ProductIntegrationsHubspotPropertyManager", data: "Product integrations" },
     { name: "SoftwareStackHubspotPropertyManager", data: "Software stack data" },
     { name: "CompanyDataFromAnalystsHubspotPropertyManager", data: "Analyst data" },
-    { name: "CompanyLatestDeleteFlowDataHubspotPropertyManager", data: "Delete flow data" }
+    { name: "CompanyLatestDeleteFlowDataHubspotPropertyManager", data: "Delete flow data" },
+    { name: "CompanyPropertyValueHubspotPropertyManager", data: "Company property values" }
   ],
 
   eventSources: [
