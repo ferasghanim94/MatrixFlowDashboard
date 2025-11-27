@@ -27,6 +27,8 @@ flowchart TD
         Real-time"]
         PW4["HubspotEventsRunner
         Real-time"]
+        PW5["PaymentFormCreatorWorker
+        On event"]
     end
 
     subgraph PropertyManagers["📋 PROPERTY MANAGERS 19"]
@@ -52,6 +54,7 @@ flowchart TD
         HS["update_companies
         update_contacts
         Batch API"]
+        HSF["create_payment_forms"]
     end
 
     Triggers --> Aggregation
@@ -67,6 +70,7 @@ flowchart TD
     PW2 --> HS
     PW3 --> HS
     PW4 --> HS
+    PW5 --> HSF
     
     BD1 --> HS
     BD2 --> HS
@@ -141,6 +145,13 @@ export const hubspotPushFlowData = {
       interval: "Real-time",
       risk: "P1",
       description: "Company/user events, workflows, emails"
+    },
+    { 
+      name: "PaymentFormCreatorWorker", 
+      queue: "matrix.hubspot_create_payment_request_form",
+      interval: "On event",
+      risk: "P1",
+      description: "Creates payment request forms in HubSpot"
     }
   ],
 
@@ -176,7 +187,8 @@ export const hubspotPushFlowData = {
     { topic: "feature_feedback_to_hubspot", publisher: "FeatureFeedbackRunner", description: "Feature feedback" },
     { topic: "user_bi_data_updated", publisher: "BI Analytics", description: "User BI data updates" },
     { topic: "contact_bi_data_updated", publisher: "BI Analytics", description: "Contact BI data updates" },
-    { topic: "updated_user_usage_event", publisher: "UserUsageRunner", description: "User usage updates" }
+    { topic: "updated_user_usage_event", publisher: "UserUsageRunner", description: "User usage updates" },
+    { topic: "hubspot_create_payment_request_form", publisher: "PaymentRequestHandler", description: "Payment form creation request" }
   ],
   
   tables: {
@@ -197,7 +209,8 @@ export const hubspotPushFlowData = {
     ],
     write: [
       "(HubSpot API) Company properties",
-      "(HubSpot API) Contact properties"
+      "(HubSpot API) Contact properties",
+      "(HubSpot API) Payment forms"
     ]
   },
 
@@ -259,6 +272,8 @@ flowchart TD
         Deal events & associations"]
         PW4["HubspotCallWebhookRunner
         Call deletion events"]
+        PW5["JiraHubspotIntegrationWorker
+        Jira to HubSpot sync"]
     end
 
     subgraph MatrixDB["🗄️ MATRIX DATABASE"]
@@ -326,6 +341,13 @@ export const hubspotPullFlowData = {
       topics: "hubspot_general_webhook.object.deletion",
       risk: "P2",
       description: "Call deletion events"
+    },
+    { 
+      name: "JiraHubspotIntegrationWorker", 
+      queue: "matrix.jira_hubspot_integration",
+      topics: "jira_ticket_events",
+      risk: "P1",
+      description: "Syncs Jira tickets to HubSpot"
     }
   ],
 
@@ -341,7 +363,9 @@ export const hubspotPullFlowData = {
     { source: "HubSpot Webhook", event: "contact.propertyChange", description: "Contact property modified in HubSpot" },
     { source: "HubSpot Webhook", event: "deal.propertyChange", description: "Deal property modified" },
     { source: "HubSpot Webhook", event: "deal.associationChange", description: "Deal association added/removed" },
-    { source: "HubSpot Webhook", event: "object.deletion", description: "Object deleted in HubSpot" }
+    { source: "HubSpot Webhook", event: "object.deletion", description: "Object deleted in HubSpot" },
+    { source: "Jira Webhook", event: "ticket.created", description: "New Jira ticket created" },
+    { source: "Jira Webhook", event: "ticket.updated", description: "Jira ticket updated" }
   ],
 
   propertiesSynced: {
@@ -438,78 +462,91 @@ export const hubspotPullFlowData = {
 
 export const hubspotScheduledFlowDiagram = `
 flowchart TD
-    subgraph ScheduledTriggers["⏰ SCHEDULED TRIGGERS"]
-        ST1["Every 60 min
-        12h cooldown"]
-        ST2[Every 2 hours]
-        ST3[Every hour]
-        ST4["Every hour
-        min 15"]
+    subgraph CriticalMonitoring["🚨 CRITICAL MONITORING"]
+        CM1["hubspot_dqa_timeliness
+        Every 5 min"]
+        CM2["HubspotAlertsRunner
+        Rate limits"]
     end
 
-    subgraph Workers["⚙️ SCHEDULED WORKERS"]
-        W1["HubspotPeriodicRunner
-        Company usage sync"]
-        W2["hubspot_cron
-        Airflow DAG"]
-        W3["hubspot_meetings_sync
-        Airflow DAG"]
-        W4["hubspot_contact_list_membership_dag
-        Airflow DAG"]
+    subgraph SlackAlerts["🔔 SLACK ALERTS"]
+        SL["Slack Notifications"]
     end
 
-    subgraph SyncOps["🔄 SYNC OPERATIONS"]
-        SO1["Publish company
-        usage events"]
-        SO2["General sync
-        operations"]
-        SO3["Fetch meetings
-        from HubSpot"]
-        SO4["Sync list memberships
-        from HubSpot"]
+    subgraph HourlyCrons["⏰ HOURLY CRONS"]
+        HC1["sync_hubspot_calls"]
+        HC2["hubspot_meetings"]
+        HC3["hubspot_email_engagements"]
+        HC4["hubspot_email_events"]
+        HC5["hubspot_dqa_full"]
     end
 
-    subgraph Backfill["📦 BACKFILL On-Demand"]
-        BF["HubspotBackfillWorker
-        POST hubspot sync"]
-        BF1[Company Backfill]
-        BF2[Contact Backfill]
-        BF3[Field-Specific Backfill]
+    subgraph TwoHourlyCrons["⏱️ 2-HOURLY CRONS"]
+        TH1["sync_hubspot_deals"]
+        TH2["sync_hubspot_tickets"]
+        TH3["sync_hubspot_company_bugs"]
+    end
+
+    subgraph PeriodicWorkers["📊 PERIODIC WORKERS"]
+        PW1["HubspotPeriodicRunner
+        60 min"]
+        PW2["hubspot_user_usage_dispatcher
+        15 min"]
+        PW3["hubspot_contact_list_membership
+        hourly"]
+    end
+
+    subgraph DailyCrons["📅 DAILY CRONS"]
+        DC1["long_runs_cron
+        21:00"]
+        DC2["daily_data_integrity_tasks
+        6:00"]
+    end
+
+    subgraph Backfill["📦 BACKFILL"]
+        BF["HubspotBackfillWorker"]
     end
 
     subgraph OutputTables["🗄️ OUTPUT TABLES"]
         OT1[hubspot_sync]
         OT2[meeting]
-        OT3[hubspot_engagement_association_v3]
-        OT4[hubspot_contact_list_membership]
-        OT5[hubspot_backfill]
-        OT6[hubspot_backfill_task]
+        OT3[call]
+        OT4[email]
+        OT5[hubspot_email_events]
+        OT6[hubspot_deal_v2]
+        OT7[hubspot_ticket]
+        OT8[hubspot_dqa_results]
+        OT9[hubspot_alerts]
     end
 
-    ST1 --> W1
-    ST2 --> W2
-    ST3 --> W3
-    ST4 --> W4
+    CM1 --> OT8
+    CM1 --> SL
+    CM2 --> OT9
+    CM2 --> SL
+    HC5 --> SL
     
-    W1 --> SO1
-    W2 --> SO2
-    W3 --> SO3
-    W4 --> SO4
+    HC1 --> OT3
+    HC2 --> OT2
+    HC3 --> OT4
+    HC4 --> OT5
+    HC5 --> OT8
     
-    SO1 --> OT1
-    SO3 --> OT2
-    SO3 --> OT3
-    SO4 --> OT4
+    TH1 --> OT6
+    TH2 --> OT7
+    TH3 --> OT1
     
-    BF --> BF1
-    BF --> BF2
-    BF --> BF3
-    BF1 & BF2 & BF3 --> OT5
-    BF1 & BF2 & BF3 --> OT6
+    PW1 & PW2 --> OT1
+    
+    DC1 & DC2 --> OT1
+    
+    BF --> OT1
 
-    style ScheduledTriggers fill:#fef3c7,stroke:#d97706
-    style Workers fill:#dbeafe,stroke:#2563eb
-    style SyncOps fill:#e0f2fe,stroke:#0284c7
+    style CriticalMonitoring fill:#fecaca,stroke:#dc2626
+    style SlackAlerts fill:#fef9c3,stroke:#ca8a04
+    style HourlyCrons fill:#fef3c7,stroke:#d97706
+    style TwoHourlyCrons fill:#fed7aa,stroke:#ea580c
+    style PeriodicWorkers fill:#dbeafe,stroke:#2563eb
+    style DailyCrons fill:#e0e7ff,stroke:#6366f1
     style Backfill fill:#f3e8ff,stroke:#9333ea
     style OutputTables fill:#dcfce7,stroke:#16a34a
 `;
@@ -521,6 +558,87 @@ export const hubspotScheduledFlowData = {
   description: "Timed/periodic jobs that sync data between Matrix and HubSpot on a schedule. Includes periodic company sync, meeting sync, contact list membership sync, and on-demand backfill operations.",
   
   workers: [
+    // Critical Monitoring
+    { 
+      name: "hubspot_dqa_timeliness", 
+      schedule: "Every 5 min",
+      type: "Cron",
+      risk: "P0",
+      description: "Critical timeliness monitoring for HubSpot data quality. Fires Slack alert if thresholds breached"
+    },
+    { 
+      name: "HubspotAlertsRunner", 
+      schedule: "On event",
+      type: "Worker",
+      risk: "P0",
+      description: "Monitors rate limits, saves to hubspot_alerts table, fires Slack alert if needed"
+    },
+    // Hourly Crons
+    { 
+      name: "sync_hubspot_calls", 
+      schedule: "Every hour",
+      type: "Cron",
+      risk: "P1",
+      description: "Syncs call engagements from HubSpot"
+    },
+    { 
+      name: "hubspot_meetings", 
+      schedule: "Every hour",
+      type: "Airflow DAG",
+      risk: "P1",
+      description: "Fetches meeting engagements from HubSpot API"
+    },
+    { 
+      name: "hubspot_email_engagements", 
+      schedule: "Every hour",
+      type: "Cron",
+      risk: "P1",
+      description: "Syncs email engagements from HubSpot"
+    },
+    { 
+      name: "hubspot_email_events", 
+      schedule: "Every hour",
+      type: "Cron",
+      risk: "P1",
+      description: "Syncs email events (opens, clicks) from HubSpot"
+    },
+    { 
+      name: "hubspot_dqa_full", 
+      schedule: "Every hour",
+      type: "Cron",
+      risk: "P1",
+      description: "Full DQA test suite for HubSpot data quality. Fires Slack alert if tests fail"
+    },
+    { 
+      name: "check_qualification_list_membership", 
+      schedule: "Every hour",
+      type: "Cron",
+      risk: "P1",
+      description: "Checks contact qualification list membership"
+    },
+    // 2-Hourly Crons
+    { 
+      name: "sync_hubspot_company_bugs", 
+      schedule: "Every 2 hours",
+      type: "Cron",
+      risk: "P1",
+      description: "Syncs company bugs from HubSpot"
+    },
+    { 
+      name: "sync_hubspot_deals", 
+      schedule: "Every 2 hours",
+      type: "Cron",
+      risk: "P1",
+      description: "Syncs deals from HubSpot"
+    },
+    { 
+      name: "sync_hubspot_tickets", 
+      schedule: "Every 2 hours",
+      type: "Cron",
+      risk: "P1",
+      description: "Syncs tickets from HubSpot"
+    },
+    // Periodic Workers
     { 
       name: "HubspotPeriodicRunner", 
       schedule: "Every 60 min (12h cooldown)",
@@ -529,18 +647,11 @@ export const hubspotScheduledFlowData = {
       description: "Syncs companies modified in last 12 hours"
     },
     { 
-      name: "hubspot_cron", 
-      schedule: "Every 2 hours",
-      type: "Airflow DAG",
+      name: "hubspot_user_usage_dispatcher", 
+      schedule: "Every 15 min",
+      type: "Cron",
       risk: "P1",
-      description: "General HubSpot sync operations"
-    },
-    { 
-      name: "hubspot_meetings_sync", 
-      schedule: "Every hour",
-      type: "Airflow DAG",
-      risk: "P1",
-      description: "Fetches meeting engagements from HubSpot API"
+      description: "Dispatches user usage sync jobs"
     },
     { 
       name: "hubspot_contact_list_membership_dag", 
@@ -549,6 +660,22 @@ export const hubspotScheduledFlowData = {
       risk: "P2",
       description: "Syncs marketing contact list memberships"
     },
+    // Daily Crons
+    { 
+      name: "long_runs_cron", 
+      schedule: "Daily 21:00",
+      type: "Cron",
+      risk: "P1",
+      description: "Long-running sync operations"
+    },
+    { 
+      name: "daily_data_integrity_tasks", 
+      schedule: "Daily 6:00",
+      type: "Cron",
+      risk: "P1",
+      description: "HubSpot contacts data integrity checks"
+    },
+    // Backfill
     { 
       name: "HubspotBackfillWorker", 
       schedule: "On-demand",
@@ -572,6 +699,19 @@ export const hubspotScheduledFlowData = {
     { operation: "Field-Specific Backfill", entity: "Company/Contact", description: "Sync specific fields only" }
   ],
   
+  syncOperations: [
+    { operation: "Company Usage Sync", direction: "Matrix → HubSpot", description: "Publish company usage events" },
+    { operation: "Calls Sync", direction: "HubSpot → Matrix", description: "Fetch call engagements" },
+    { operation: "Deals Sync", direction: "HubSpot → Matrix", description: "Fetch deal records" },
+    { operation: "Tickets Sync", direction: "HubSpot → Matrix", description: "Fetch ticket records" },
+    { operation: "Meetings Sync", direction: "HubSpot → Matrix", description: "Fetch meeting engagements" },
+    { operation: "Email Engagements Sync", direction: "HubSpot → Matrix", description: "Fetch email engagements" },
+    { operation: "Email Events Sync", direction: "HubSpot → Matrix", description: "Fetch email opens/clicks" },
+    { operation: "List Membership Sync", direction: "HubSpot → Matrix", description: "Fetch contact list memberships" },
+    { operation: "DQA Tests", direction: "Matrix", description: "Data quality assurance monitoring" },
+    { operation: "Data Integrity", direction: "Matrix", description: "Contact data integrity validation" }
+  ],
+
   tables: {
     read: [
       "company_profile_usage",
@@ -582,28 +722,43 @@ export const hubspotScheduledFlowData = {
     write: [
       "hubspot_sync",
       "meeting",
+      "call",
+      "email",
+      "hubspot_email_events",
+      "hubspot_deal_v2",
+      "hubspot_ticket",
       "hubspot_engagement_association_v3",
       "hubspot_contact_list_membership",
       "hubspot_backfill",
-      "hubspot_backfill_task"
+      "hubspot_backfill_task",
+      "hubspot_dqa_results",
+      "hubspot_alerts"
     ]
   },
 
   businessImpact: [
+    { area: "Data Quality Monitoring", description: "DQA tests catch data issues before they impact business" },
     { area: "Data Completeness", description: "Catches missed real-time events ensuring no data gaps" },
     { area: "Meeting Tracking", description: "Meeting data drives CS engagement metrics and follow-ups" },
+    { area: "Call Analytics", description: "Call data enables sales performance and coaching analysis" },
+    { area: "Email Insights", description: "Email engagement data informs marketing effectiveness" },
+    { area: "Deal Pipeline", description: "Deal sync ensures accurate revenue forecasting" },
+    { area: "Support Context", description: "Ticket sync provides support history for CS/Sales" },
     { area: "Marketing Lists", description: "List membership affects campaign targeting accuracy" },
     { area: "Data Recovery", description: "Backfill enables bulk data repair after issues" },
-    { area: "Consistency", description: "Periodic sync ensures eventual consistency" }
+    { area: "Rate Limit Management", description: "Alerts prevent API quota exhaustion" }
   ],
 
   validationGaps: {
-    p0: [],
+    p0: [
+      "No automatic recovery when DQA tests fail"
+    ],
     p1: [
       "No sync completeness validation",
       "No meeting deduplication",
       "No backfill batch size limits",
-      "No retry logic for failed batches"
+      "No retry logic for failed batches",
+      "No email engagement deduplication"
     ],
     p2: [
       "No stale sync detection"
