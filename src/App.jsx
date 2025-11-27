@@ -6,6 +6,9 @@ import OfflineConversions from './pages/OfflineConversions';
 import CompanyFunnel from './pages/CompanyFunnel';
 import PaymentsFlow from './pages/PaymentsFlow';
 import DataQuality from './pages/DataQuality';
+import HubspotPushFlow from './pages/HubspotPushFlow';
+import HubspotPullFlow from './pages/HubspotPullFlow';
+import HubspotScheduledFlow from './pages/HubspotScheduledFlow';
 
 function App() {
   return (
@@ -18,6 +21,9 @@ function App() {
           <Route path="/company-funnel" element={<CompanyFunnel />} />
           <Route path="/payments" element={<PaymentsFlow />} />
           <Route path="/data-quality" element={<DataQuality />} />
+          <Route path="/hubspot/push" element={<HubspotPushFlow />} />
+          <Route path="/hubspot/pull" element={<HubspotPullFlow />} />
+          <Route path="/hubspot/scheduled" element={<HubspotScheduledFlow />} />
         </Routes>
       </Layout>
     </Router>

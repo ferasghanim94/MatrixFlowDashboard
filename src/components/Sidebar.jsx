@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   TrendingUp, 
@@ -7,7 +7,12 @@ import {
   DollarSign, 
   AlertTriangle,
   Menu,
-  X
+  X,
+  Link2,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Clock,
+  ChevronDown
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -17,11 +22,22 @@ const navItems = [
   { path: '/offline-conversions', label: 'Offline Conversions', icon: Send },
   { path: '/company-funnel', label: 'Company Funnel', icon: Users },
   { path: '/payments', label: 'Payments Flow', icon: DollarSign },
-  { path: '/data-quality', label: 'Data Quality', icon: AlertTriangle },
+];
+
+const hubspotItems = [
+  { path: '/hubspot/push', label: 'Push Flow', icon: ArrowUpRight },
+  { path: '/hubspot/pull', label: 'Pull Flow', icon: ArrowDownLeft },
+  { path: '/hubspot/scheduled', label: 'Scheduled Jobs', icon: Clock },
 ];
 
 function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [hubspotExpanded, setHubspotExpanded] = useState(false);
+  const location = useLocation();
+
+  // Auto-expand HubSpot menu if on a HubSpot page
+  const isHubspotActive = location.pathname.startsWith('/hubspot');
+  const showHubspotExpanded = hubspotExpanded || isHubspotActive;
 
   return (
     <>
@@ -78,13 +94,75 @@ function Sidebar() {
               <span className="font-medium">{item.label}</span>
             </NavLink>
           ))}
+
+          {/* HubSpot Integration Collapsible Menu */}
+          <div className="pt-2">
+            <button
+              onClick={() => setHubspotExpanded(!showHubspotExpanded)}
+              className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                isHubspotActive
+                  ? 'bg-orange-600/20 text-orange-300'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Link2 size={20} />
+                <span className="font-medium">HubSpot Integration</span>
+              </div>
+              <ChevronDown 
+                size={18} 
+                className={`transition-transform duration-200 ${showHubspotExpanded ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {/* HubSpot Sub-items */}
+            <div className={`overflow-hidden transition-all duration-200 ${
+              showHubspotExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+            }`}>
+              <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-700 pl-4">
+                {hubspotItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm ${
+                        isActive
+                          ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/30'
+                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      }`
+                    }
+                  >
+                    <item.icon size={16} />
+                    <span className="font-medium">{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Data Quality - after HubSpot */}
+          <NavLink
+            to="/data-quality"
+            onClick={() => setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                isActive
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`
+            }
+          >
+            <AlertTriangle size={20} />
+            <span className="font-medium">Data Quality</span>
+          </NavLink>
         </nav>
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-700">
           <div className="text-xs text-slate-500">
-            <p>Last Updated: Nov 25, 2025</p>
-            <p className="mt-1">v1.0.0 MVP</p>
+            <p>Last Updated: Nov 27, 2025</p>
+            <p className="mt-1">v1.1.0</p>
           </div>
         </div>
       </aside>
@@ -93,6 +171,3 @@ function Sidebar() {
 }
 
 export default Sidebar;
-
-
-
