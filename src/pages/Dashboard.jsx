@@ -8,7 +8,10 @@ import {
   Database,
   ArrowRight,
   BarChart3,
-  Activity
+  Activity,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Clock
 } from 'lucide-react';
 import MetricCard from '../components/MetricCard';
 import PriorityBadge from '../components/PriorityBadge';
@@ -16,6 +19,7 @@ import { attributionFlowData } from '../data/flows/attribution';
 import { offlineConversionsFlowData } from '../data/flows/offline';
 import { companyFunnelFlowData } from '../data/flows/company';
 import { paymentsFlowData } from '../data/flows/payments';
+import { hubspotPushFlowData, hubspotPullFlowData, hubspotScheduledFlowData } from '../data/flows/hubspot';
 
 // Aggregate data from all flows
 const flows = [
@@ -62,6 +66,39 @@ const flows = [
     borderColor: 'border-emerald-200',
     iconBg: 'bg-emerald-100',
     iconColor: 'text-emerald-600',
+  },
+  {
+    id: 'hubspot-push',
+    path: '/hubspot/push',
+    data: hubspotPushFlowData,
+    icon: ArrowUpRight,
+    color: 'orange',
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-200',
+    iconBg: 'bg-orange-100',
+    iconColor: 'text-orange-600',
+  },
+  {
+    id: 'hubspot-pull',
+    path: '/hubspot/pull',
+    data: hubspotPullFlowData,
+    icon: ArrowDownLeft,
+    color: 'sky',
+    bgColor: 'bg-sky-50',
+    borderColor: 'border-sky-200',
+    iconBg: 'bg-sky-100',
+    iconColor: 'text-sky-600',
+  },
+  {
+    id: 'hubspot-scheduled',
+    path: '/hubspot/scheduled',
+    data: hubspotScheduledFlowData,
+    icon: Clock,
+    color: 'indigo',
+    bgColor: 'bg-indigo-50',
+    borderColor: 'border-indigo-200',
+    iconBg: 'bg-indigo-100',
+    iconColor: 'text-indigo-600',
   },
 ];
 
@@ -232,29 +269,32 @@ function Dashboard() {
           </h2>
           
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <span className="text-gray-700">Marketing</span>
-              </div>
-              <span className="text-2xl font-bold text-blue-700">2</span>
-            </div>
-            
-            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-100">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-purple-500" />
-                <span className="text-gray-700">CRM</span>
-              </div>
-              <span className="text-2xl font-bold text-purple-700">1</span>
-            </div>
-            
-            <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                <span className="text-gray-700">Payments</span>
-              </div>
-              <span className="text-2xl font-bold text-emerald-700">1</span>
-            </div>
+            {(() => {
+              const categoryConfig = {
+                Marketing: { bg: 'bg-blue-50', border: 'border-blue-100', dot: 'bg-blue-500', text: 'text-blue-700' },
+                CRM: { bg: 'bg-purple-50', border: 'border-purple-100', dot: 'bg-purple-500', text: 'text-purple-700' },
+                Payment: { bg: 'bg-emerald-50', border: 'border-emerald-100', dot: 'bg-emerald-500', text: 'text-emerald-700' },
+              };
+              
+              const categoryCounts = flows.reduce((acc, flow) => {
+                const cat = flow.data.category;
+                acc[cat] = (acc[cat] || 0) + 1;
+                return acc;
+              }, {});
+              
+              return Object.entries(categoryCounts).map(([category, count]) => {
+                const config = categoryConfig[category] || { bg: 'bg-gray-50', border: 'border-gray-100', dot: 'bg-gray-500', text: 'text-gray-700' };
+                return (
+                  <div key={category} className={`flex items-center justify-between p-4 ${config.bg} rounded-lg border ${config.border}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${config.dot}`} />
+                      <span className="text-gray-700">{category}</span>
+                    </div>
+                    <span className={`text-2xl font-bold ${config.text}`}>{count}</span>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
       </div>

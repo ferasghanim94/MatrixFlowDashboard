@@ -55,6 +55,16 @@ flowchart TD
         update_contacts
         Batch API"]
         HSF["create_payment_forms"]
+        HSB["create/update bugs
+        Custom Objects"]
+    end
+
+    subgraph JiraIntegration["🔗 JIRA INTEGRATION"]
+        JW["Jira Webhooks
+        Bug events"]
+        JI["JiraHubspotIntegrationWorker
+        Queue: matrix.jira_hubspot_events"]
+        JT[jira_company_issue]
     end
 
     Triggers --> Aggregation
@@ -75,7 +85,12 @@ flowchart TD
     BD1 --> HS
     BD2 --> HS
 
+    JW --> JI
+    JI --> JT
+    JI --> HSB
+
     style Triggers fill:#e0f2fe,stroke:#0284c7
+    style JiraIntegration fill:#fecaca,stroke:#dc2626
     style Aggregation fill:#fef3c7,stroke:#d97706
     style PushWorkers fill:#dbeafe,stroke:#2563eb
     style PropertyManagers fill:#f3e8ff,stroke:#9333ea
@@ -152,6 +167,13 @@ export const hubspotPushFlowData = {
       interval: "On event",
       risk: "P1",
       description: "Creates payment request forms in HubSpot"
+    },
+    { 
+      name: "JiraHubspotIntegrationWorker", 
+      queue: "matrix.jira_hubspot_events",
+      interval: "On event",
+      risk: "P1",
+      description: "Syncs Jira bugs to HubSpot custom objects"
     }
   ],
 
@@ -188,7 +210,8 @@ export const hubspotPushFlowData = {
     { topic: "user_bi_data_updated", publisher: "BI Analytics", description: "User BI data updates" },
     { topic: "contact_bi_data_updated", publisher: "BI Analytics", description: "Contact BI data updates" },
     { topic: "updated_user_usage_event", publisher: "UserUsageRunner", description: "User usage updates" },
-    { topic: "hubspot_create_payment_request_form", publisher: "PaymentRequestHandler", description: "Payment form creation request" }
+    { topic: "hubspot_create_payment_request_form", publisher: "PaymentRequestHandler", description: "Payment form creation request" },
+    { topic: "jira_events_webhook", publisher: "Jira Webhooks", description: "Jira bug creation/update events" }
   ],
   
   tables: {
@@ -210,7 +233,9 @@ export const hubspotPushFlowData = {
     write: [
       "(HubSpot API) Company properties",
       "(HubSpot API) Contact properties",
-      "(HubSpot API) Payment forms"
+      "(HubSpot API) Payment forms",
+      "(HubSpot API) Bug custom objects",
+      "jira_company_issue"
     ]
   },
 
@@ -272,8 +297,6 @@ flowchart TD
         Deal events & associations"]
         PW4["HubspotCallWebhookRunner
         Call deletion events"]
-        PW5["JiraHubspotIntegrationWorker
-        Jira to HubSpot sync"]
     end
 
     subgraph MatrixDB["🗄️ MATRIX DATABASE"]
@@ -341,13 +364,6 @@ export const hubspotPullFlowData = {
       topics: "hubspot_general_webhook.object.deletion",
       risk: "P2",
       description: "Call deletion events"
-    },
-    { 
-      name: "JiraHubspotIntegrationWorker", 
-      queue: "matrix.jira_hubspot_integration",
-      topics: "jira_ticket_events",
-      risk: "P1",
-      description: "Syncs Jira tickets to HubSpot"
     }
   ],
 
@@ -363,9 +379,7 @@ export const hubspotPullFlowData = {
     { source: "HubSpot Webhook", event: "contact.propertyChange", description: "Contact property modified in HubSpot" },
     { source: "HubSpot Webhook", event: "deal.propertyChange", description: "Deal property modified" },
     { source: "HubSpot Webhook", event: "deal.associationChange", description: "Deal association added/removed" },
-    { source: "HubSpot Webhook", event: "object.deletion", description: "Object deleted in HubSpot" },
-    { source: "Jira Webhook", event: "ticket.created", description: "New Jira ticket created" },
-    { source: "Jira Webhook", event: "ticket.updated", description: "Jira ticket updated" }
+    { source: "HubSpot Webhook", event: "object.deletion", description: "Object deleted in HubSpot" }
   ],
 
   propertiesSynced: {
@@ -461,106 +475,169 @@ export const hubspotPullFlowData = {
 // =============================================================================
 
 export const hubspotScheduledFlowDiagram = `
-flowchart TD
-    subgraph CriticalMonitoring["🚨 CRITICAL MONITORING"]
-        CM1["hubspot_dqa_timeliness
-        Every 5 min"]
-        CM2["HubspotAlertsRunner
-        Rate limits"]
+flowchart LR
+    subgraph Sources["🔄 DATA SOURCES"]
+        direction TB
+        
+        subgraph PullFromHubSpot["📥 PULL FROM HUBSPOT"]
+            direction TB
+            subgraph EngagementSync["Engagement Sync - Hourly"]
+                HC1["sync_hubspot_calls"]
+                HC2["hubspot_meetings"]
+                HC3["hubspot_email_engagements"]
+            end
+            
+            subgraph EventSync["Event Sync - Hourly"]
+                HC4["hubspot_email_events"]
+                PW3["hubspot_contact_list_membership"]
+            end
+            
+            subgraph EntitySync["Entity Sync - 2 Hourly"]
+                TH1["sync_hubspot_deals"]
+                TH2["sync_hubspot_tickets"]
+            end
+        end
+
+        subgraph PushToHubSpot["📤 PUSH TO HUBSPOT"]
+            direction TB
+            TH3["sync_hubspot_company_bugs
+            Monday.com → HubSpot"]
+            DC1["long_runs_cron
+            User Associations"]
+            BF["HubspotBackfillWorker
+            Bulk Sync"]
+        end
+
+        subgraph InternalProcessing["⚙️ INTERNAL PROCESSING"]
+            direction TB
+            subgraph PeriodicSync["Periodic Sync"]
+                PW1["HubspotPeriodicRunner
+                60 min cooldown"]
+            end
+            
+            subgraph Dispatchers["Dispatchers"]
+                PW2["hubspot_user_usage_dispatcher
+                Every 15 min"]
+                HC6["check_qualification_list_membership
+                Hourly"]
+            end
+            
+            subgraph DataIntegrity["Data Integrity"]
+                DC2["daily_data_integrity_tasks
+                Daily 6:00"]
+            end
+        end
+
+        subgraph Monitoring["🚨 MONITORING & ALERTS"]
+            direction TB
+            CM1["hubspot_dqa_timeliness
+            Every 5 min - CRITICAL"]
+            HC5["hubspot_dqa_full
+            Hourly"]
+            CM2["HubspotAlertsRunner
+            Rate Limits"]
+        end
     end
 
-    subgraph SlackAlerts["🔔 SLACK ALERTS"]
-        SL["Slack Notifications"]
+    subgraph Outputs["📦 OUTPUTS"]
+        direction TB
+        
+        subgraph EngagementTables["📊 ENGAGEMENT TABLES"]
+            OT3[call]
+            OT2[meeting]
+            OT4[email]
+            OT12[hubspot_engagement_association_v3]
+        end
+
+        subgraph EntityTables["📋 ENTITY TABLES"]
+            OT6[hubspot_deal_v2]
+            OT14[hubspot_deal_association]
+            OT15[hubspot_deal_pipeline]
+            OT7[hubspot_ticket]
+            OT16[hubspot_ticket_association]
+            OT17[hubspot_ticket_pipeline]
+            OT5[hubspot_email_events]
+            OT13[hubspot_contact_list_membership]
+        end
+
+        subgraph SystemTables["🗄️ SYSTEM TABLES"]
+            OT1[hubspot_sync]
+            OT10[hubspot_backfill]
+            OT11[hubspot_backfill_task]
+            OT8[hubspot_dqa_results]
+            OT9[hubspot_alerts]
+        end
+
+        subgraph Notifications["📬 TOPICS & ALERTS"]
+            TP1["engagement_event topic"]
+            TP2["company_usage_changed topic"]
+            TP4["user_usage_aggregated topic"]
+            TP3["chilipiper_qualification topic"]
+            SL["Slack Alerts"]
+        end
+
+        subgraph ExternalAPI["🌐 EXTERNAL API"]
+            EXT1["HubSpot API
+            PUT/POST requests"]
+        end
     end
 
-    subgraph HourlyCrons["⏰ HOURLY CRONS"]
-        HC6["check_qualification_list_membership"]
-        HC1["sync_hubspot_calls"]
-        HC2["hubspot_meetings"]
-        HC3["hubspot_email_engagements"]
-        HC4["hubspot_email_events"]
-        HC5["hubspot_dqa_full"]
-    end
-
-    subgraph TwoHourlyCrons["⏱️ 2-HOURLY CRONS"]
-        TH1["sync_hubspot_deals"]
-        TH2["sync_hubspot_tickets"]
-        TH3["sync_hubspot_company_bugs"]
-    end
-
-    subgraph PeriodicWorkers["📊 PERIODIC WORKERS"]
-        PW1["HubspotPeriodicRunner
-        60 min"]
-        PW2["hubspot_user_usage_dispatcher
-        15 min"]
-        PW3["hubspot_contact_list_membership
-        hourly"]
-    end
-
-    subgraph DailyCrons["📅 DAILY CRONS"]
-        DC1["long_runs_cron
-        21:00"]
-        DC2["daily_data_integrity_tasks
-        6:00"]
-    end
-
-    subgraph Backfill["📦 BACKFILL"]
-        BF["HubspotBackfillWorker"]
-    end
-
-    subgraph OutputTables["🗄️ OUTPUT TABLES"]
-        OT1[hubspot_sync]
-        OT2[meeting]
-        OT3[call]
-        OT4[email]
-        OT5[hubspot_email_events]
-        OT6[hubspot_deal_v2]
-        OT7[hubspot_ticket]
-        OT8[hubspot_dqa_results]
-        OT9[hubspot_alerts]
-        OT10[hubspot_backfill]
-        OT11[hubspot_backfill_task]
-        OT12[hubspot_engagement_association_v3]
-        OT13[hubspot_contact_list_membership]
-    end
-
-    CM1 --> OT8
-    CM1 --> SL
-    CM2 --> OT9
-    CM2 --> SL
-    HC5 --> SL
-    
+    %% Engagement Sync flows
     HC1 --> OT3
     HC2 --> OT2
     HC3 --> OT4
-    HC4 --> OT5
-    HC5 --> OT8
-    
-    TH1 --> OT6
-    TH2 --> OT7
-    TH3 --> OT1
-    
-    PW1 & PW2 --> OT1
-    
-    DC1 & DC2 --> OT1
-    
-    BF --> OT1
-    BF --> OT10
-    BF --> OT11
-    
-    HC2 --> OT12
     HC1 --> OT12
-    HC6 --> OT13
+    HC2 --> OT12
+    HC3 --> OT12
+    HC1 --> TP1
+    HC2 --> TP1
+    HC3 --> TP1
+
+    %% Event Sync flows
+    HC4 --> OT5
     PW3 --> OT13
 
-    style CriticalMonitoring fill:#fecaca,stroke:#dc2626
-    style SlackAlerts fill:#fef9c3,stroke:#ca8a04
-    style HourlyCrons fill:#fef3c7,stroke:#d97706
-    style TwoHourlyCrons fill:#fed7aa,stroke:#ea580c
-    style PeriodicWorkers fill:#dbeafe,stroke:#2563eb
-    style DailyCrons fill:#e0e7ff,stroke:#6366f1
-    style Backfill fill:#f3e8ff,stroke:#9333ea
-    style OutputTables fill:#dcfce7,stroke:#16a34a
+    %% Entity Sync flows
+    TH1 --> OT6
+    TH1 --> OT14
+    TH1 --> OT15
+    TH2 --> OT7
+    TH2 --> OT16
+    TH2 --> OT17
+
+    %% Backfill flows
+    BF --> OT10
+    BF --> OT11
+
+    %% Internal Processing flows
+    PW1 --> OT1
+    PW1 --> TP2
+    PW2 --> TP4
+    HC6 --> TP3
+    DC1 --> OT1
+
+    %% Push to HubSpot API flows
+    TH3 -.-> EXT1
+    DC1 -.-> EXT1
+    BF -.-> EXT1
+
+    %% Monitoring flows
+    CM1 --> OT8
+    CM1 --> SL
+    HC5 --> OT8
+    HC5 --> SL
+    CM2 --> OT9
+    CM2 --> SL
+
+    style PullFromHubSpot fill:#dbeafe,stroke:#2563eb
+    style PushToHubSpot fill:#fed7aa,stroke:#ea580c
+    style InternalProcessing fill:#e0e7ff,stroke:#6366f1
+    style Monitoring fill:#fecaca,stroke:#dc2626
+    style EngagementTables fill:#dcfce7,stroke:#16a34a
+    style EntityTables fill:#d1fae5,stroke:#059669
+    style SystemTables fill:#f3e8ff,stroke:#9333ea
+    style Notifications fill:#fef9c3,stroke:#ca8a04
+    style ExternalAPI fill:#fce7f3,stroke:#db2777
 `;
 
 export const hubspotScheduledFlowData = {
@@ -738,7 +815,11 @@ export const hubspotScheduledFlowData = {
       "email",
       "hubspot_email_events",
       "hubspot_deal_v2",
+      "hubspot_deal_association",
+      "hubspot_deal_pipeline",
       "hubspot_ticket",
+      "hubspot_ticket_association",
+      "hubspot_ticket_pipeline",
       "hubspot_engagement_association_v3",
       "hubspot_contact_list_membership",
       "hubspot_backfill",

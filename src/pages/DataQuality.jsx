@@ -5,12 +5,14 @@ import {
   XCircle, 
   AlertCircle,
   ArrowRight,
-  Database,
   Users,
   TrendingUp,
   Send,
   DollarSign,
-  Filter
+  Filter,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Clock
 } from 'lucide-react';
 import { useState } from 'react';
 import MetricCard from '../components/MetricCard';
@@ -19,6 +21,7 @@ import { attributionFlowData } from '../data/flows/attribution';
 import { offlineConversionsFlowData } from '../data/flows/offline';
 import { companyFunnelFlowData } from '../data/flows/company';
 import { paymentsFlowData } from '../data/flows/payments';
+import { hubspotPushFlowData, hubspotPullFlowData, hubspotScheduledFlowData } from '../data/flows/hubspot';
 
 // Aggregate all flows
 const flows = [
@@ -49,6 +52,27 @@ const flows = [
     data: paymentsFlowData,
     icon: DollarSign,
     color: 'emerald',
+  },
+  {
+    id: 'hubspot-push',
+    path: '/hubspot/push',
+    data: hubspotPushFlowData,
+    icon: ArrowUpRight,
+    color: 'orange',
+  },
+  {
+    id: 'hubspot-pull',
+    path: '/hubspot/pull',
+    data: hubspotPullFlowData,
+    icon: ArrowDownLeft,
+    color: 'sky',
+  },
+  {
+    id: 'hubspot-scheduled',
+    path: '/hubspot/scheduled',
+    data: hubspotScheduledFlowData,
+    icon: Clock,
+    color: 'indigo',
   },
 ];
 
@@ -110,8 +134,8 @@ function DataQuality() {
 
   const filteredGaps = allGaps.filter((gap) => {
     if (filterPriority !== 'all' && gap.priority !== filterPriority) return false;
-    if (filterFlow !== 'all' && gap.flowId !== filterFlow) return false;
-    return true;
+    return !(filterFlow !== 'all' && gap.flowId !== filterFlow);
+
   });
 
   // Group filtered gaps by priority
@@ -205,7 +229,6 @@ function DataQuality() {
         <div className="space-y-4">
           {totalsByFlow.map((flow) => {
             const Icon = flow.icon;
-            const percentage = (flow.total / allGaps.length) * 100;
             
             return (
               <Link
