@@ -9,11 +9,15 @@ A modern, interactive dashboard for visualizing critical data flows and data qua
 ## Features
 
 - **Interactive Flow Diagrams** - Visualize complex data pipelines with Mermaid.js
-- **4 Critical Flows Documented**:
+- **PNG Export** - Download flow diagrams as PNG images
+- **7 Critical Flows Documented**:
   - Attribution Flow (Marketing)
   - Offline Conversions Flow (Marketing)
   - Company Funnel Flow (CRM)
   - Payments Processing Flow (Payments)
+  - **HubSpot Push Flow** (CRM) - Matrix → HubSpot data sync
+  - **HubSpot Pull Flow** (CRM) - HubSpot → Matrix webhook processing
+  - **HubSpot Scheduled Jobs Flow** (CRM) - Periodic sync and monitoring jobs
 - **Data Quality Dashboard** - Track validation gaps across all flows with P0/P1/P2 priority levels
 - **Responsive Design** - Works on desktop and mobile devices
 - **Modern UI** - Clean, professional interface with Tailwind CSS
@@ -104,8 +108,8 @@ flow-dashboard/
 ├── src/
 │   ├── components/          # Reusable UI components
 │   │   ├── Layout.jsx       # Main layout with sidebar
-│   │   ├── Sidebar.jsx      # Navigation sidebar
-│   │   ├── FlowDiagram.jsx  # Mermaid diagram renderer
+│   │   ├── Sidebar.jsx      # Navigation sidebar (with collapsible HubSpot menu)
+│   │   ├── FlowDiagram.jsx  # Mermaid diagram renderer (with PNG export)
 │   │   ├── MetricCard.jsx   # Metric display cards
 │   │   ├── PriorityBadge.jsx # P0/P1/P2 badges
 │   │   └── WorkerCard.jsx   # Worker info cards
@@ -115,13 +119,17 @@ flow-dashboard/
 │   │   ├── OfflineConversions.jsx
 │   │   ├── CompanyFunnel.jsx
 │   │   ├── PaymentsFlow.jsx
+│   │   ├── HubspotPushFlow.jsx    # HubSpot Push Flow (Matrix → HubSpot)
+│   │   ├── HubspotPullFlow.jsx    # HubSpot Pull Flow (HubSpot → Matrix)
+│   │   ├── HubspotScheduledFlow.jsx # HubSpot Scheduled Jobs
 │   │   └── DataQuality.jsx  # Quality metrics dashboard
 │   ├── data/
 │   │   └── flows/           # Flow data definitions
 │   │       ├── attribution.js
 │   │       ├── offline.js
 │   │       ├── company.js
-│   │       └── payments.js
+│   │       ├── payments.js
+│   │       └── hubspot.js   # HubSpot Integration (Push, Pull, Scheduled)
 │   ├── App.jsx              # Router configuration
 │   ├── main.jsx             # React entry point
 │   └── index.css            # Tailwind CSS imports
@@ -141,6 +149,9 @@ flow-dashboard/
 | `/offline-conversions` | Offline Conversions Flow details |
 | `/company-funnel` | Company Funnel Flow details |
 | `/payments` | Payments Processing Flow details |
+| `/hubspot/push` | HubSpot Push Flow (Matrix → HubSpot) |
+| `/hubspot/pull` | HubSpot Pull Flow (HubSpot → Matrix webhooks) |
+| `/hubspot/scheduled` | HubSpot Scheduled Jobs (crons, backfill, monitoring) |
 | `/data-quality` | Data Quality metrics dashboard |
 
 ## Tech Stack
